@@ -10,6 +10,8 @@
 
 These queries use **Censys Platform** (CenQL) syntax. Censys has moved from Legacy Search to a new data model with `host`, `cert`, and `web` dataset prefixes. For software/product detection, use the full host+web coverage query. See: [Censys Platform Syntax Differences](https://docs.censys.com/docs/censys-platform-syntax-differences) | [Query Converter](https://docs.censys.com/docs/query-converter)
 
+Queries using `=~` require Censys Starter or an enterprise plan. A documented field path does not by itself validate a threat attribution or guarantee current search results.
+
 ---
 
 ## 📖 Table of Contents
@@ -26,6 +28,8 @@ These queries use **Censys Platform** (CenQL) syntax. Censys has moved from Lega
 
 ## GOPHISH (Phishing Framework)
 
+The single-indicator searches below are **low-confidence candidates**; run each line separately. The combined searches are **unvalidated candidates**, not confirmed high-confidence detections. Validate their relationship to Gophish before raising the detection level.
+
 ### Product Detection (host + web coverage)
 ```
 host.services.software.product:"GoPhish" or host.services.hardware.product:"GoPhish" or host.services.operating_systems.product:"GoPhish" or web.software.product:"GoPhish" or web.hardware.product:"GoPhish" or web.operating_systems.product:"GoPhish"
@@ -40,14 +44,14 @@ web.endpoints.http.html_title:"Gophish"
 
 ### SSL Certificate
 ```
-host.services.tls.certificates.leaf_data.issuer.organization:"Gophish"
-host.services.tls.certificates.leaf_data.subject.organization:"Gophish"
+host.services.cert.parsed.issuer.organization:"Gophish"
+host.services.cert.parsed.subject.organization:"Gophish"
 ```
 
-### Cookie Based (UNIQUE!)
+### Cookie Based
 ```
-host.services.endpoints.http.headers: (key:"Set-Cookie" and value:"gophish=")
-host.services.endpoints.http.headers: (key:"Set-Cookie" and value:"_gorilla_csrf=")
+host.services.endpoints.http.headers:(key="Set-Cookie" and value:"gophish=")
+host.services.endpoints.http.headers:(key="Set-Cookie" and value:"_gorilla_csrf=")
 ```
 
 ### HTML Content
@@ -57,21 +61,28 @@ host.services.endpoints.http.body:"Open-Source Phishing Toolkit"
 web.endpoints.http.body:"gophish.css"
 ```
 
+### Favicon Fingerprint
+```
+host.services.endpoints.http.favicons.hash_sha256="6f383235d8dec5350c1233c04b035b116bbbd2b287c13deb298a123dc5e49d03"
+```
+
 ### Port Based (Default: 3333)
 ```
-host.services.port:3333 AND host.services.endpoints.http.html_title:"Gophish"
+host.services:(port=3333 and endpoints.http.html_title:"Gophish")
 ```
 
 ### JARM Fingerprints
 ```
-host.services.tls.jarm.fingerprint:"28d28d28d00028d00041d28d28d41dd279b0cf765af27fa62e66d7c8281124"
-host.services.tls.jarm.fingerprint:"2ad2ad0002ad2ad00041d2ad2ad41dc347a1c956987fa29fb299da896c61ea"
+host.services.jarm.fingerprint="28d28d28d00028d00041d28d28d41dd279b0cf765af27fa62e66d7c8281124"
+host.services.jarm.fingerprint="2ad2ad0002ad2ad00041d2ad2ad41dc347a1c956987fa29fb299da896c61ea"
 ```
 
-### Combined High Confidence
+### Combined Candidates (Not Yet Validated)
 ```
-host.services.endpoints.http.html_title:"Gophish" AND host.services.tls.certificates.leaf_data.issuer.organization:"Gophish"
-host.services.endpoints.http.body:"gophish.css" AND host.services.endpoints.http.html_title:"Gophish"
+host.services:(endpoints.http.html_title:"Gophish" and cert.parsed.issuer.organization:"Gophish")
+host.services:(endpoints.http.body:"gophish.css" and endpoints.http.html_title:"Gophish")
+host.services:(endpoints.http.favicons.hash_sha256="6f383235d8dec5350c1233c04b035b116bbbd2b287c13deb298a123dc5e49d03" and endpoints.http.body:"/css/dist/gophish.css")
+host.services:(endpoints.http.favicons.hash_sha256="6f383235d8dec5350c1233c04b035b116bbbd2b287c13deb298a123dc5e49d03" and cert.parsed.issuer.organization:"Gophish")
 ```
 
 ---
@@ -110,10 +121,10 @@ host.services.software.product:"Collector Stealer" or host.services.hardware.pro
 
 ### JARM Fingerprints
 ```
-host.services.tls.jarm.fingerprint:"15d3fd16d29d29d00042d43d000000f6a76359d2423084924eaeb5187f1701"
-host.services.tls.jarm.fingerprint:"3fd3fd0003fd3fd21c42d42d000000bdfc58c9a46434368cf60aa440385763"
-host.services.tls.jarm.fingerprint:"28d28d28d00028d00042d42d000000d6376f1d8fe64877806a85a008c1c790"
-host.services.tls.jarm.fingerprint:"3fd3fd0003fd3fd21c42d42d000000307ee0eb468e9fdb5cfcd698a80a67ef"
+host.services.jarm.fingerprint:"15d3fd16d29d29d00042d43d000000f6a76359d2423084924eaeb5187f1701"
+host.services.jarm.fingerprint:"3fd3fd0003fd3fd21c42d42d000000bdfc58c9a46434368cf60aa440385763"
+host.services.jarm.fingerprint:"28d28d28d00028d00042d42d000000d6376f1d8fe64877806a85a008c1c790"
+host.services.jarm.fingerprint:"3fd3fd0003fd3fd21c42d42d000000307ee0eb468e9fdb5cfcd698a80a67ef"
 ```
 
 ### JA3S Fingerprint
@@ -137,7 +148,7 @@ host.services.endpoints.http.html_title:"熊猫" AND host.services.endpoints.htt
 ## METASPLOIT
 
 ```
-host.services.tls.certificates.leaf_data.subject.common_name:"MetasploitSelfSignedCA"
+host.services.cert.parsed.subject.common_name:"MetasploitSelfSignedCA"
 ```
 
 ---
@@ -146,32 +157,32 @@ host.services.tls.certificates.leaf_data.subject.common_name:"MetasploitSelfSign
 
 ### Classic Patterns
 ```
-host.services.tls.certificates.leaf_data.subject.common_name:"localhost"
-host.services.tls.certificates.leaf_data.subject.organization:"Internet Widgits Pty Ltd"
-host.services.tls.certificates.leaf_data.issuer.organization:"1"
+host.services.cert.parsed.subject.common_name:"localhost"
+host.services.cert.parsed.subject.organization:"Internet Widgits Pty Ltd"
+host.services.cert.parsed.issuer.organization:"1"
 ```
 
 ### LlamaHQ-Swoole C2 Infrastructure
 ```
-host.services.endpoints.http.headers.server:"LlamaHQ-Swoole"
+host.services.endpoints.http.headers:(key="Server" and value:"LlamaHQ-Swoole")
 ```
 
 ### C2 API Response Patterns
 ```
 host.services.endpoints.http.body:"no project for"
 host.services.endpoints.http.body:"Worker is running with geo-worker"
-host.services.port:23454 AND host.services.endpoints.http.body:"Authentication required"
+host.services:(port=23454 and endpoints.http.body:"Authentication required")
 ```
 
 ### Suspicious Ports (IcedID infra)
 ```
-host.services.port:9501 AND host.services.endpoints.http.headers.server:"LlamaHQ-Swoole"
-host.services.port:17262 AND host.services.endpoints.http.body:"geo-worker"
+host.services:(port=9501 and endpoints.http.headers:(key="Server" and value:"LlamaHQ-Swoole"))
+host.services:(port=17262 and endpoints.http.body:"geo-worker")
 ```
 
 ### Combined
 ```
-host.services.endpoints.http.headers.server:"LlamaHQ-Swoole" AND host.services.port:9501
+host.services:(endpoints.http.headers:(key="Server" and value:"LlamaHQ-Swoole") and port=9501)
 ```
 
 ---
@@ -179,7 +190,6 @@ host.services.endpoints.http.headers.server:"LlamaHQ-Swoole" AND host.services.p
 ## COVENANT C2
 
 ```
-host.services.endpoints.http.body_hash="sha1:*"
 host.services.endpoints.http.html_tags:"Blazor"
 ```
 
@@ -188,7 +198,7 @@ host.services.endpoints.http.html_tags:"Blazor"
 ## SUPERSHELL C2
 
 ```
-host.services.endpoints.http.body_hash="sha1:c023c2f42e6fa22f6b0f5284f2c24d8abcef6191"
+host.services.endpoints.http.body_hash_sha1="c023c2f42e6fa22f6b0f5284f2c24d8abcef6191"
 ```
 
 ---
@@ -196,7 +206,7 @@ host.services.endpoints.http.body_hash="sha1:c023c2f42e6fa22f6b0f5284f2c24d8abce
 ## TITAN STEALER
 
 ```
-host.services.endpoints.http.html_tags:"*Tital Stealer*"
+host.services.endpoints.http.html_tags:"Tital Stealer"
 ```
 
 ---
@@ -204,8 +214,8 @@ host.services.endpoints.http.html_tags:"*Tital Stealer*"
 ## VIDAR C2
 
 ```
-host.services.tls.certificates.leaf_data.issuer.organization:"StaticIP"
-host.services.tls.certificates.leaf_data.issuer.organizational_unit:"privateIP"
+host.services.cert.parsed.issuer.organization:"StaticIP"
+host.services.cert.parsed.issuer.organizational_unit:"privateIP"
 ```
 
 ---
@@ -213,17 +223,17 @@ host.services.tls.certificates.leaf_data.issuer.organizational_unit:"privateIP"
 ## COBALT STRIKE (CERT / JARM)
 
 ```
-host.services.tls.certificates.leaf_data.subject.common_name:"Major Cobalt Strike"
-host.services.tls.certificates.leaf_data.issuer.common_name:"Major Cobalt Strike"
-host.services.tls.certificates.leaf_data.serial_number:146473198
-host.services.tls.jarm.fingerprint:"2ad2ad16d2ad2ad00042d42d00042ddb04deffa1705e2edc44cae1ed24a4da"
+host.services.cert.parsed.subject.common_name:"Major Cobalt Strike"
+host.services.cert.parsed.issuer.common_name:"Major Cobalt Strike"
+host.services.cert.parsed.serial_number="146473198"
+host.services.jarm.fingerprint:"2ad2ad16d2ad2ad00042d42d00042ddb04deffa1705e2edc44cae1ed24a4da"
 ```
 
-### JARM + HTTP Combo (fake issuer names)
+### JARM + Certificate Combo (fake issuer names)
 ```
-host.services.tls.jarm.fingerprint:"2ad2ad16d2ad2ad00042d42d00042ddb04deffa1705e2edc44cae1ed24a4da" AND host.services.tls.certificates.leaf_data.issuer.common_name:"jquery.com"
-host.services.tls.jarm.fingerprint:"2ad2ad16d2ad2ad00042d42d00042ddb04deffa1705e2edc44cae1ed24a4da" AND host.services.tls.certificates.leaf_data.issuer.common_name:"Google"
-host.services.tls.jarm.fingerprint:"2ad2ad16d2ad2ad00042d42d00042ddb04deffa1705e2edc44cae1ed24a4da" AND host.services.tls.certificates.leaf_data.issuer.common_name:"Microsoft Windows"
+host.services:(jarm.fingerprint:"2ad2ad16d2ad2ad00042d42d00042ddb04deffa1705e2edc44cae1ed24a4da" and cert.parsed.issuer.common_name:"jquery.com")
+host.services:(jarm.fingerprint:"2ad2ad16d2ad2ad00042d42d00042ddb04deffa1705e2edc44cae1ed24a4da" and cert.parsed.issuer.common_name:"Google")
+host.services:(jarm.fingerprint:"2ad2ad16d2ad2ad00042d42d00042ddb04deffa1705e2edc44cae1ed24a4da" and cert.parsed.issuer.common_name:"Microsoft Windows")
 ```
 
 ---
@@ -232,34 +242,62 @@ host.services.tls.jarm.fingerprint:"2ad2ad16d2ad2ad00042d42d00042ddb04deffa1705e
 
 ```
 host.services.endpoints.http.body:"sliver"
-host.services.tls.certificates.leaf_data.issuer.common_name:"operators"
-host.services.tls.jarm.fingerprint:"3fd21b20d00000021c43d21b21b43d41226dd5dfc615dd4a96265559485910"
+host.services.cert.parsed.issuer.common_name:"operators"
+host.services.jarm.fingerprint:"3fd21b20d00000021c43d21b21b43d41226dd5dfc615dd4a96265559485910"
 ```
 
 ### Open Directory with Sliver
 ```
-host.services.labels.value:"SUSPICIOUS_OPEN_DIR" or host.services.labels.value:"OPEN_DIRECTORY" AND host.services.endpoints.http.body:"sliver"
+host.services:((labels.value="SUSPICIOUS_OPEN_DIR" or labels.value="OPEN_DIRECTORY") and endpoints.http.body:"sliver")
 host.services.endpoints.http.body:"sliver.exe" AND host.services.endpoints.http.html_title:"Index of"
-host.services.endpoints.http.body:"MimiKatz" AND host.services.labels.value:"SUSPICIOUS_OPEN_DIR" or host.services.labels.value:"OPEN_DIRECTORY"
-host.services.endpoints.http.body:"xworm" AND host.services.labels.value:"SUSPICIOUS_OPEN_DIR" or host.services.labels.value:"OPEN_DIRECTORY"
-host.services.endpoints.http.body:"metasploit" AND host.services.labels.value:"SUSPICIOUS_OPEN_DIR" or host.services.labels.value:"OPEN_DIRECTORY"
+host.services:(endpoints.http.body:"MimiKatz" and (labels.value="SUSPICIOUS_OPEN_DIR" or labels.value="OPEN_DIRECTORY"))
+host.services:(endpoints.http.body:"xworm" and (labels.value="SUSPICIOUS_OPEN_DIR" or labels.value="OPEN_DIRECTORY"))
+host.services:(endpoints.http.body:"metasploit" and (labels.value="SUSPICIOUS_OPEN_DIR" or labels.value="OPEN_DIRECTORY"))
 ```
 
 ---
 
 ## MYTHIC C2
 
+### Title
 ```
 host.services.endpoints.http.html_title:"Mythic"
-host.services.endpoints.http.body:"mythic-react"
-host.services.tls.certificates.leaf_data.subject.organization:"Mythic"
-host.services.tls.jarm.fingerprint:"1dd40d40d00040d00042d43d000000831b6af40378e2dd35eeac4e9311926e"
-host.services.tls.jarm.fingerprint:"27d40d40d00040d00042d43d000000d2e61cae37a985f75ecafb81b33ca523"
+```
+
+### Port + Title (same service)
+```
+host.services:(port=7443 and endpoints.http.html_title:"Mythic")
+```
+
+### Certificate
+```
+host.services.cert.parsed.subject.organization:"Mythic"
+host.services.cert.parsed.issuer.organization:"Mythic"
+```
+
+### Favicon Fingerprint
+```
+host.services.endpoints.http.favicons.hash_sha256:"3cbf2084fe1733debe21f33511754191ed8f46268d1a8a122a29cccfc7c969f2"
+```
+
+> **Note:** This favicon is strongly associated with observed Mythic deployments but is not exclusive to Mythic. Prefer combining it with additional Mythic indicators for higher-confidence detection.
+
+### Same-service Combinations
+```
+host.services:(endpoints.http.html_title:"Mythic" and cert.parsed.subject.organization:"Mythic")
+host.services:(endpoints.http.favicons.hash_sha256:"3cbf2084fe1733debe21f33511754191ed8f46268d1a8a122a29cccfc7c969f2" and endpoints.http.html_title:"Mythic")
+host.services:(port=7443 and endpoints.http.html_title:"Mythic" and cert.parsed.subject.organization:"Mythic")
+```
+
+### JARM Fingerprints
+```
+host.services.jarm.fingerprint:"1dd40d40d00040d00042d43d000000831b6af40378e2dd35eeac4e9311926e"
+host.services.jarm.fingerprint:"27d40d40d00040d00042d43d000000d2e61cae37a985f75ecafb81b33ca523"
 ```
 
 ### Laravel/Inertia Based Panels
 ```
-host.services.endpoints.http.html_title:"C2 Panel" AND host.services.endpoints.http.headers.set_cookie:"c2backend_session"
+host.services:(endpoints.http.html_title:"C2 Panel" and endpoints.http.headers:(key="Set-Cookie" and value:"c2backend_session"))
 host.services.endpoints.http.body:"<title inertia>C2 Panel</title>"
 ```
 
@@ -282,8 +320,8 @@ host.services.endpoints.http.body:"available_user_tasks"
 
 ### Port Based (Default: 8089)
 ```
-host.services.port:8089 AND host.services.endpoints.http.html_title:"Locust"
-host.services.port:8089 AND host.services.endpoints.http.body:"HTTPFloodUser"
+host.services:(port=8089 and endpoints.http.html_title:"Locust")
+host.services:(port=8089 and endpoints.http.body:"HTTPFloodUser")
 ```
 
 ### Generic C2 Panel with Locust
@@ -313,7 +351,7 @@ host.services.software.product:"XMRig Monero Cryptominer"
 
 ### JARM Fingerprint
 ```
-host.services.tls.jarm.fingerprint:"29d29d00029d29d00042d42d00000023f2ae7180b8a0816654f2296c007d93"
+host.services.jarm.fingerprint:"29d29d00029d29d00042d42d00000023f2ae7180b8a0816654f2296c007d93"
 ```
 
 ### JA3S Fingerprint
@@ -323,12 +361,12 @@ host.services.tls.ja3s:"574866101f64002c6421cc329e4d5458"
 
 ### Server Pattern (Flask/Werkzeug)
 ```
-host.services.endpoints.http.headers.server:"Werkzeug"
+host.services.endpoints.http.headers:(key="Server" and value:"Werkzeug")
 ```
 
 ### Port Based
 ```
-host.services.port:5000 AND host.services.endpoints.http.html_title:"IMMORTAL DROPPER"
+host.services:(port=5000 and endpoints.http.html_title:"IMMORTAL DROPPER")
 ```
 
 ### Known Wallet
@@ -338,7 +376,7 @@ host.services.endpoints.http.body:"48edfHu7V9Z84YzzMa6fUueoELZ9ZRXq9VetWzYGzKt52
 
 ### Combined
 ```
-host.services.software.product:"XMRig" AND host.services.tls.jarm.fingerprint:"29d29d00029d29d00042d42d00000023f2ae7180b8a0816654f2296c007d93"
+host.services:(software.product:"XMRig" and jarm.fingerprint:"29d29d00029d29d00042d42d00000023f2ae7180b8a0816654f2296c007d93")
 ```
 
 ---
@@ -366,7 +404,7 @@ host.services.endpoints.http.body:"Shadow C2 Command Center"
 
 ### JARM Fingerprint
 ```
-host.services.tls.jarm.fingerprint:"14d14d16d14d14d08c14d14d14d14dfd9c9d14e4f4f67f94f0359f8b28f532"
+host.services.jarm.fingerprint:"14d14d16d14d14d08c14d14d14d14dfd9c9d14e4f4f67f94f0359f8b28f532"
 ```
 
 ### JA3S Fingerprint
@@ -376,13 +414,13 @@ host.services.tls.ja3s:"ba1b42efc7dc57bb43bf81de59791c1b"
 
 ### Server Pattern (Flask)
 ```
-host.services.endpoints.http.headers.server:"Werkzeug" AND host.services.endpoints.http.html_title:"Shadow"
-host.services.port:5000 AND host.services.endpoints.http.html_title:"Shadow C2"
+host.services:(endpoints.http.headers:(key="Server" and value:"Werkzeug") and endpoints.http.html_title:"Shadow")
+host.services:(port=5000 and endpoints.http.html_title:"Shadow C2")
 ```
 
 ### Combined
 ```
-host.services.endpoints.http.html_title:"Shadow C2 Panel" AND host.services.tls.jarm.fingerprint:"14d14d16d14d14d08c14d14d14d14dfd9c9d14e4f4f67f94f0359f8b28f532"
+host.services:(endpoints.http.html_title:"Shadow C2 Panel" and jarm.fingerprint:"14d14d16d14d14d08c14d14d14d14dfd9c9d14e4f4f67f94f0359f8b28f532")
 ```
 
 ---
@@ -413,7 +451,7 @@ host.autonomous_system.name:"SERV.HOST GROUP LTD" AND host.services.endpoints.ht
 ```
 host.services.software.product:"XtremeRAT"
 host.services.endpoints.http.body:"XtremeRAT"
-host.services.tls.certificates.leaf_data.subject.common_name:"XtremeRAT"
+host.services.cert.parsed.subject.common_name:"XtremeRAT"
 ```
 
 ---
@@ -442,7 +480,7 @@ host.services.endpoints.http.body:"Gh0st"
 ```
 host.services.software.product:"NanoCore"
 host.services.endpoints.http.body:"NanoCore"
-host.services.tls.certificates.leaf_data.subject.common_name:"NanoCore"
+host.services.cert.parsed.subject.common_name:"NanoCore"
 host.services.port:54984
 ```
 
@@ -452,8 +490,8 @@ host.services.port:54984
 
 ```
 host.services.software.product:"Orcus"
-host.services.tls.certificates.leaf_data.subject.common_name:"Orcus Server"
-host.services.tls.certificates.leaf_data.issuer_dn="CN=OrcusServerCertificate"
+host.services.cert.parsed.subject.common_name:"Orcus Server"
+host.services.cert.parsed.issuer_dn="CN=OrcusServerCertificate"
 host.services.endpoints.http.body:"Orcus"
 ```
 
@@ -464,7 +502,7 @@ host.services.endpoints.http.body:"Orcus"
 ```
 host.services.software.product:"Remcos"
 host.services.endpoints.http.body:"Remcos"
-host.services.tls.certificates.leaf_data.subject.common_name:"Remcos"
+host.services.cert.parsed.subject.common_name:"Remcos"
 host.autonomous_system.organization:"langhuajiaju"
 ```
 
@@ -505,7 +543,7 @@ host.services.port:4444 OR host.services.port:4445
 ```
 host.services.endpoints.http.html_title:"Interactsh"
 host.services.endpoints.http.body:"interactsh"
-host.services.tls.certificates.leaf_data.subject.common_name:"interactsh"
+host.services.cert.parsed.subject.common_name:"interactsh"
 ```
 
 ---
@@ -545,9 +583,9 @@ host.services.endpoints.http.body:"TinyPilot"
 host.services.endpoints.http.html_title:"Deimos"
 host.services.endpoints.http.html_title:"Deimos C2"
 host.services.endpoints.http.body:"Deimos"
-host.services.tls.certificates.leaf_data.subject.common_name:"Deimos"
-host.services.tls.certificates.leaf_data.subject.organization:"Acme Co" AND host.services.port:8443
-host.services.tls.certificates.leaf_data.subject.organization:"Acme Co"
+host.services.cert.parsed.subject.common_name:"Deimos"
+host.services:(cert.parsed.subject.organization:"Acme Co" and port=8443)
+host.services.cert.parsed.subject.organization:"Acme Co"
 ```
 
 ---
@@ -555,7 +593,7 @@ host.services.tls.certificates.leaf_data.subject.organization:"Acme Co"
 ## MERLIN C2
 
 ```
-host.services.tls.jarm.fingerprint:"29d21b20d29d29d21c41d21b21b41d494e0df9532e75299f15ba73156cee38"
+host.services.jarm.fingerprint:"29d21b20d29d29d21c41d21b21b41d494e0df9532e75299f15ba73156cee38"
 host.services.endpoints.http.html_title:"Merlin"
 host.services.endpoints.http.body:"Merlin"
 ```
@@ -565,7 +603,7 @@ host.services.endpoints.http.body:"Merlin"
 ## KEYCLOAK (Potential C2 Infrastructure)
 
 ```
-host.services.endpoints.http.favicons.sha256_hash:"47dcf1f1a8f1afd68297a294a263849069a7a62b2e86550241416c2cc56c5676"
+host.services.endpoints.http.favicons.hash_sha256:"47dcf1f1a8f1afd68297a294a263849069a7a62b2e86550241416c2cc56c5676"
 host.services.endpoints.http.html_title:"Keycloak"
 host.services.endpoints.http.body:"Keycloak"
 ```
@@ -577,7 +615,7 @@ host.services.endpoints.http.body:"Keycloak"
 ```
 host.services.software.product:"Pupy"
 host.services.endpoints.http.body:"Pupy"
-host.services.tls.certificates.leaf_data.subject.organizational_unit:"CONTROL"
+host.services.cert.parsed.subject.organizational_unit:"CONTROL"
 ```
 
 ---
@@ -606,7 +644,7 @@ host.services.endpoints.http.html_title:"RansomHub"
 
 ### Product Detection
 ```
-host.services.software.product:"Hak5 Cloud C2"
+host.services.software.product:"Hak5 Cloud C2" or host.services.hardware.product:"Hak5 Cloud C2" or host.services.operating_systems.product:"Hak5 Cloud C2" or web.software.product:"Hak5 Cloud C2" or web.hardware.product:"Hak5 Cloud C2" or web.operating_systems.product:"Hak5 Cloud C2"
 ```
 
 ### Title Based
@@ -623,14 +661,14 @@ host.services.endpoints.http.body:"<app-root></app-root>" AND host.services.endp
 
 ### Port Based (Default: 8080)
 ```
-host.services.port:8080 AND host.services.endpoints.http.html_title:"Hak5"
+host.services:(port=8080 and endpoints.http.html_title:"Hak5")
 ```
 
 ### JARM Fingerprints
 ```
-host.services.tls.jarm.fingerprint:"3fd21b20d00000021c43d21b21b43de0a012c76cf078b8d06f4620c2286f5e"
-host.services.tls.jarm.fingerprint:"40d1db40d0000001dc43d1db1db43de0a012c76cf078b8d06f4620c2286f5e"
-host.services.tls.jarm.fingerprint:"27d40d40d00040d00042d43d000000d2e61cae37a985f75ecafb81b33ca523"
+host.services.jarm.fingerprint:"3fd21b20d00000021c43d21b21b43de0a012c76cf078b8d06f4620c2286f5e"
+host.services.jarm.fingerprint:"40d1db40d0000001dc43d1db1db43de0a012c76cf078b8d06f4620c2286f5e"
+host.services.jarm.fingerprint:"27d40d40d00040d00042d43d000000d2e61cae37a985f75ecafb81b33ca523"
 ```
 
 ### JA3S Fingerprints
@@ -660,8 +698,8 @@ host.services.port:5405 OR host.services.port:5421
 ## ASYNCRAT
 
 ```
-host.services.tls.certificates.leaf_data.issuer_dn="CN=AsyncRAT Server"
-host.services.tls.certificates.leaf_data.subject.common_name:"AsyncRAT Server"
+host.services.cert.parsed.issuer_dn="CN=AsyncRAT Server"
+host.services.cert.parsed.subject.common_name:"AsyncRAT Server"
 ```
 
 ---
@@ -669,8 +707,8 @@ host.services.tls.certificates.leaf_data.subject.common_name:"AsyncRAT Server"
 ## VENOMRAT
 
 ```
-host.services.tls.certificates.leaf_data.subject.common_name:"VenomRAT"
-host.services.tls.certificates.leaf_data.issuer.common_name:"VenomRAT"
+host.services.cert.parsed.subject.common_name:"VenomRAT"
+host.services.cert.parsed.issuer.common_name:"VenomRAT"
 host.services.endpoints.http.body:"VenomRAT"
 ```
 
@@ -679,8 +717,8 @@ host.services.endpoints.http.body:"VenomRAT"
 ## BITRAT
 
 ```
-host.services.tls.certificates.leaf_data.issuer_dn="CN=BitRAT"
-host.services.tls.certificates.leaf_data.subject.common_name:"BitRAT"
+host.services.cert.parsed.issuer_dn="CN=BitRAT"
+host.services.cert.parsed.subject.common_name:"BitRAT"
 host.services.endpoints.http.body:"BitRAT"
 ```
 
@@ -689,7 +727,7 @@ host.services.endpoints.http.body:"BitRAT"
 ## SECTOPRAT C2
 
 ```
-host.services.port:9000 AND host.services.endpoints.http.headers.server:"Microsoft-HTTPAPI/2.0" AND host.services.endpoints.http.status_code:404
+host.services:(port=9000 and endpoints.http.headers:(key="Server" and value:"Microsoft-HTTPAPI/2.0") and endpoints.http.status_code=404)
 ```
 
 ---
@@ -707,7 +745,7 @@ host.services.endpoints.http.body:"HookBot"
 ## OYSTER C2
 
 ```
-host.services.endpoints.http.body_hash:"sha256:f84b78e96fc74a902481247dc87434c5ce7b6130f0fa53ab5ba1f6fe1d50d377"
+host.services.endpoints.http.body_hash_sha256="f84b78e96fc74a902481247dc87434c5ce7b6130f0fa53ab5ba1f6fe1d50d377"
 host.services.endpoints.http.body:"Oyster"
 ```
 
@@ -716,9 +754,9 @@ host.services.endpoints.http.body:"Oyster"
 ## HAVOC C2
 
 ```
-host.services.endpoints.http.headers:"X_Havoc"
+host.services.endpoints.http.headers:(key="X_Havoc")
 host.services.endpoints.http.body:"Havoc"
-host.services.tls.certificates.leaf_data.subject.common_name:"Havoc"
+host.services.cert.parsed.subject.common_name:"Havoc"
 ```
 
 ---
@@ -728,7 +766,7 @@ host.services.tls.certificates.leaf_data.subject.common_name:"Havoc"
 ```
 host.services.endpoints.http.body:"XWorm"
 host.services.endpoints.http.body:"xworm"
-host.services.tls.certificates.leaf_data.subject.common_name:"XWorm"
+host.services.cert.parsed.subject.common_name:"XWorm"
 ```
 
 ---
@@ -747,8 +785,8 @@ host.services.endpoints.http.html_title:"Directory Listing for" AND host.service
 
 ### Self-signed Certificate Patterns
 ```
-host.services.tls.certificates.leaf_data.issuer.organization:"Internet Widgits Pty Ltd"
-host.services.tls.certificates.leaf_data.subject.common_name:"localhost"
+host.services.cert.parsed.issuer.organization:"Internet Widgits Pty Ltd"
+host.services.cert.parsed.subject.common_name:"localhost"
 ```
 
 ---
@@ -769,13 +807,13 @@ host.services.endpoints.http.body:"checkboxWindow"
 
 ### Let's Encrypt Certificate with ClickFix
 ```
-host.services.tls.certificates.leaf_data.issuer_dn:"CN=Let's Encrypt" AND host.services.endpoints.http.html_title:"Checking if you are human"
-host.services.tls.certificates.leaf_data.issuer.organization:"Let's Encrypt" AND host.services.endpoints.http.body:"k4zrz92z"
+host.services:(cert.parsed.issuer_dn:"CN=Let's Encrypt" and endpoints.http.html_title:"Checking if you are human")
+host.services:(cert.parsed.issuer.organization:"Let's Encrypt" and endpoints.http.body:"k4zrz92z")
 ```
 
 ### Sectigo Certificate with ClickFix
 ```
-host.services.tls.certificates.leaf_data.issuer.organization:"Sectigo" AND host.services.endpoints.http.body:"k4zrz92z"
+host.services:(cert.parsed.issuer.organization:"Sectigo" and endpoints.http.body:"k4zrz92z")
 ```
 
 ### Behavior-based Detection
@@ -791,7 +829,6 @@ host.services.endpoints.http.body:"clipboard" AND host.services.endpoints.http.h
 ### Known Infrastructure Patterns
 ```
 host.services.endpoints.http.html_title:"莹火虫的世界"
-host.services.endpoints.http.favicons.md5_hash:*
 ```
 
 ### Alibaba Cloud Infrastructure
@@ -802,15 +839,7 @@ host.autonomous_system.name:"Alibaba" AND host.services.port:8080 AND host.servi
 
 ### Chinese Language Panels
 ```
-host.services.endpoints.http.html_title:/[\u4e00-\u9fa5]+/ AND host.autonomous_system.name:"Alibaba"
-```
-
----
-
-## NIGHTHAWK C2
-
-```
-same_service(host.services.banner="HTTP/1.1 404 Not Found\r\nDate:  <REDACTED>\r\nX-Test: 2\r\nServer: Apache\r\nContent-Length: 20\r\n" and host.services.endpoints.http.body_hashes="sha256:d872e8e4176213ea84ebc76d8fb621c31b4ca116fd0a51258813e804fe110ca4")
+host.services.endpoints.http.html_title=~`[一-龥]+` and host.autonomous_system.name:"Alibaba"
 ```
 
 ---
@@ -818,7 +847,7 @@ same_service(host.services.banner="HTTP/1.1 404 Not Found\r\nDate:  <REDACTED>\r
 ## BIANLIAN GO TROJAN
 
 ```
-same_service(host.services.tls.certificates.leaf_data.subject_dn=/C=[0-9a-zA-Z]{16}, O=[0-9a-zA-Z]{16}, OU=[0-9a-zA-Z]{16}/ AND host.services.tls.certificates.leaf_data.issuer_dn=/C=[0-9a-zA-Z]{16}, O=[0-9a-zA-Z]{16}, OU=[0-9a-zA-Z]{16}/)
+host.services:(cert.parsed.subject_dn=~`C=[0-9a-zA-Z]{16}, O=[0-9a-zA-Z]{16}, OU=[0-9a-zA-Z]{16}` and cert.parsed.issuer_dn=~`C=[0-9a-zA-Z]{16}, O=[0-9a-zA-Z]{16}, OU=[0-9a-zA-Z]{16}`)
 ```
 
 ---
@@ -826,8 +855,7 @@ same_service(host.services.tls.certificates.leaf_data.subject_dn=/C=[0-9a-zA-Z]{
 ## RESPONDER (LLMNR/NBT-NS Poisoning)
 
 ```
-host.services.banner="HTTP/1.1 401 Unauthorized\r\nServer: Microsoft-IIS/7.5\r\nDate:  <REDACTED>\r\nContent-Type: text/html\r\nWWW-Authenticate: NTLM\r\nContent-Length: 0\r\n"
-host.services.banner_hashes="sha256:0fa31c8c34a370931d8ffe8097e998f778db63e2e036fbd7727a71a0dcf5d28c"
+host.services.banner_hash_sha256="0fa31c8c34a370931d8ffe8097e998f778db63e2e036fbd7727a71a0dcf5d28c"
 host.services.smb.negotiation_log.server_guid="00000000000000000000000000000000ee85abf7eaf60c4f928192476deb76a9"
 ```
 
@@ -836,9 +864,9 @@ host.services.smb.negotiation_log.server_guid="00000000000000000000000000000000e
 ## QAKBOT (Banking Trojan)
 
 ```
-same_service(host.services.tls.jarm.fingerprint={"21d14d00021d21d21c42d43d0000007abc6200da92c2a1b69c0a56366cbe21","04d02d00004d04d04c04d02d04d04d9674c6b4e623ae36cc2d998e99e2262e"} AND host.services.endpoints.http.body_hash="sha1:22e5446e82b3e46da34b5ebce6de5751664fb867")
-same_service(host.services.banner_hashes="sha256:5234096d7003929ad67037af6f5816933cab9e85f9b286468249ac9ab9bfb861" AND host.services.endpoints.http.body_hash="sha1:22e5446e82b3e46da34b5ebce6de5751664fb867")
-(host.services.tls.certificates.leaf_data.subject_dn: /C=[A-Z]{2}, OU=([A-Z][a-z]{3,})( [A-Z][a-z]{3,}){0,2}, CN=[a-z]{4,12}\.[a-z]{2,4}/ and not host.services.tls.certificates.leaf_data.subject_dn:"OU=Domain Control Validated")
+host.services:((jarm.fingerprint="21d14d00021d21d21c42d43d0000007abc6200da92c2a1b69c0a56366cbe21" or jarm.fingerprint="04d02d00004d04d04c04d02d04d04d9674c6b4e623ae36cc2d998e99e2262e") and endpoints.http.body_hash_sha1="22e5446e82b3e46da34b5ebce6de5751664fb867")
+host.services:(banner_hash_sha256="5234096d7003929ad67037af6f5816933cab9e85f9b286468249ac9ab9bfb861" and endpoints.http.body_hash_sha1="22e5446e82b3e46da34b5ebce6de5751664fb867")
+host.services:(cert.parsed.subject_dn=~`C=[A-Z]{2}, OU=([A-Z][a-z]{3,})( [A-Z][a-z]{3,}){0,2}, CN=[a-z]{4,12}\.[a-z]{2,4}` and not cert.parsed.subject_dn:"OU=Domain Control Validated")
 ```
 
 ---
@@ -846,17 +874,8 @@ same_service(host.services.banner_hashes="sha256:5234096d7003929ad67037af6f58169
 ## VIPER (Chinese C2 Framework)
 
 ```
-host.services.endpoints.http.body_hashes="sha1:cd40dbcdae84b1c8606f29342066547069ed5a33"
-host.services.endpoints.http.favicons.md5_hash="a7469955bff5e489d2270d9b389064e1"
-```
-
----
-
-## PIKABOT (Loader Malware)
-
-```
-host.services: (tls.certificates.leaf_data.signature.self_signed: true and endpoints.http.headers: (key: "Etag" and value: "3147526947+gzip") and not tls.certificates.leaf_data.subject_dn: "emailAddress=")
-host.services: (tls.certificates.leaf_data.signature.self_signed: true and tls.cipher_selected="TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256" and tls.certificates.leaf_data.pubkey_bit_size=4096 and tls.certificates.leaf_data.issuer_dn: /C=[A-Z]{2}, ST=[A-Z]{2}, O=([A-Z][a-z]{2,})( [A-Z][a-z\.]{2,}){0,5}, OU=([A-Z][a-z]{2,})( [A-Z][a-z\.]{2,}){0,5}, L=([A-Z][a-z]{2,})( [A-Z][a-z]{2,}){0,2}, CN=.*/)
+host.services.endpoints.http.body_hash_sha1="cd40dbcdae84b1c8606f29342066547069ed5a33"
+host.services.endpoints.http.favicons.hash_md5="a7469955bff5e489d2270d9b389064e1"
 ```
 
 ---
@@ -865,7 +884,7 @@ host.services: (tls.certificates.leaf_data.signature.self_signed: true and tls.c
 
 ```
 host.services.endpoints.http.html_title="Meduza Stealer"
-host.services.endpoints.http.favicons.md5_hash="e7a2bb050f7ec5ec2ba405400170a27d"
+host.services.endpoints.http.favicons.hash_md5="e7a2bb050f7ec5ec2ba405400170a27d"
 ```
 
 ---
@@ -881,7 +900,7 @@ host.services.software.product:"Evilginx" or host.services.hardware.product:"Evi
 ## GEACON_PRO (Cobalt Strike Go Implementation)
 
 ```
-same_service(host.services.tls.certificates.leaf_data.subject_dn="C=KZ, ST=KZ, L=, O=NN Fern Sub, OU=NN Fern, CN=foren.zik" AND host.services.tls.certificates.leaf_data.issuer_dn="C=KZ, ST=KZ, L=, O=NN Fern Sub, OU=NN Fern, CN=foren.zik")
+host.services:(cert.parsed.subject_dn="C=KZ, ST=KZ, L=, O=NN Fern Sub, OU=NN Fern, CN=foren.zik" and cert.parsed.issuer_dn="C=KZ, ST=KZ, L=, O=NN Fern Sub, OU=NN Fern, CN=foren.zik")
 ```
 
 ---
@@ -889,7 +908,7 @@ same_service(host.services.tls.certificates.leaf_data.subject_dn="C=KZ, ST=KZ, L
 ## CHAOS RAT
 
 ```
-host.services.software.uniform_resource_identifier: "cpe:2.3:a:chaos:chaos:*:*:*:*:*:*:*:*"
+host.services.software.cpe=~`^cpe:2\.3:a:chaos:chaos:`
 ```
 
 ---
@@ -897,7 +916,7 @@ host.services.software.uniform_resource_identifier: "cpe:2.3:a:chaos:chaos:*:*:*
 ## STEALC V2 (Info Stealer)
 
 ```
-host.services.endpoints.http.body_hashes="sha256:067b25c7c2e27041dc47a0a4564b56a6bbfdc41e5dd630dbf070fdada4dbff71"
+host.services.endpoints.http.body_hash_sha256="067b25c7c2e27041dc47a0a4564b56a6bbfdc41e5dd630dbf070fdada4dbff71"
 ```
 
 ---
@@ -905,8 +924,8 @@ host.services.endpoints.http.body_hashes="sha256:067b25c7c2e27041dc47a0a4564b56a
 ## LIGOLO-NG (Tunneling)
 
 ```
-host.services.tls.certificates.leaf_data.subject.common_name:"ligolo"
-host.services.tls.certificates.leaf_data.issuer.organization:"ligolo"
+host.services.cert.parsed.subject.common_name:"ligolo"
+host.services.cert.parsed.issuer.organization:"ligolo"
 ```
 
 ---
@@ -939,4 +958,4 @@ host.services.software.product:"Pyramid"
 
 ---
 
-**Last Updated:** 2026-02-01
+**Last Updated:** 2026-09-30

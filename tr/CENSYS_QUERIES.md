@@ -22,6 +22,8 @@
 
 Bu query'ler **Censys Platform** (CenQL) sözdizimi kullanır. Censys Legacy Search'ten `host`, `cert` ve `web` dataset prefix'li yeni veri modeline geçti. Software/product tespiti için host+web kapsamlı query kullanın. Bkz: [Censys Platform Syntax Differences](https://docs.censys.com/docs/censys-platform-syntax-differences) | [Query Converter](https://docs.censys.com/docs/query-converter)
 
+`=~` kullanan regex sorguları Censys Starter veya enterprise planı gerektirir. Belgelenmiş alan yolu tek başına tehdit atfını veya güncel arama sonuçlarını doğrulamaz.
+
 ---
 
 > **Not:** Query'ler teknik olduğu için çevrilmemiştir. Detaylı query listesi için [İngilizce versiyona](../CENSYS_QUERIES.md) bakınız.
@@ -29,6 +31,8 @@ Bu query'ler **Censys Platform** (CenQL) sözdizimi kullanır. Censys Legacy Sea
 ---
 
 ## GOPHISH (Phishing Framework)
+
+Tekil göstergeler **düşük güvenli adaylardır**; her satırı ayrı sorgulayın. Birleşik sorgular **henüz doğrulanmamış adaylardır**, yüksek güvenli tespit olarak değerlendirilmemelidir. Tespit seviyesini yükseltmeden önce Gophish ile ilişkilerini doğrulayın.
 
 ### Ürün Tespiti (host + web kapsamı)
 ```
@@ -44,8 +48,45 @@ web.endpoints.http.html_title:"Gophish"
 
 ### SSL Sertifikası
 ```
-host.services.tls.certificates.leaf_data.issuer.organization:"Gophish"
-host.services.tls.certificates.leaf_data.subject.organization:"Gophish"
+host.services.cert.parsed.issuer.organization:"Gophish"
+host.services.cert.parsed.subject.organization:"Gophish"
+```
+
+### Cookie Bazlı
+```
+host.services.endpoints.http.headers:(key="Set-Cookie" and value:"gophish=")
+host.services.endpoints.http.headers:(key="Set-Cookie" and value:"_gorilla_csrf=")
+```
+
+### HTML İçeriği
+```
+host.services.endpoints.http.body:"/css/dist/gophish.css"
+host.services.endpoints.http.body:"Open-Source Phishing Toolkit"
+web.endpoints.http.body:"gophish.css"
+```
+
+### Favicon Fingerprint'i
+```
+host.services.endpoints.http.favicons.hash_sha256="6f383235d8dec5350c1233c04b035b116bbbd2b287c13deb298a123dc5e49d03"
+```
+
+### Port Bazlı (Varsayılan: 3333)
+```
+host.services:(port=3333 and endpoints.http.html_title:"Gophish")
+```
+
+### JARM Fingerprint'leri
+```
+host.services.jarm.fingerprint="28d28d28d00028d00041d28d28d41dd279b0cf765af27fa62e66d7c8281124"
+host.services.jarm.fingerprint="2ad2ad0002ad2ad00041d2ad2ad41dc347a1c956987fa29fb299da896c61ea"
+```
+
+### Birleşik Adaylar (Henüz Doğrulanmadı)
+```
+host.services:(endpoints.http.html_title:"Gophish" and cert.parsed.issuer.organization:"Gophish")
+host.services:(endpoints.http.body:"gophish.css" and endpoints.http.html_title:"Gophish")
+host.services:(endpoints.http.favicons.hash_sha256="6f383235d8dec5350c1233c04b035b116bbbd2b287c13deb298a123dc5e49d03" and endpoints.http.body:"/css/dist/gophish.css")
+host.services:(endpoints.http.favicons.hash_sha256="6f383235d8dec5350c1233c04b035b116bbbd2b287c13deb298a123dc5e49d03" and cert.parsed.issuer.organization:"Gophish")
 ```
 
 ---
@@ -53,9 +94,9 @@ host.services.tls.certificates.leaf_data.subject.organization:"Gophish"
 ## COBALT STRIKE (CERT / JARM)
 
 ```
-host.services.tls.certificates.leaf_data.subject.common_name:"Major Cobalt Strike"
-host.services.tls.certificates.leaf_data.serial_number:146473198
-host.services.tls.jarm.fingerprint:"2ad2ad16d2ad2ad00042d42d00042ddb04deffa1705e2edc44cae1ed24a4da"
+host.services.cert.parsed.subject.common_name:"Major Cobalt Strike"
+host.services.cert.parsed.serial_number="146473198"
+host.services.jarm.fingerprint:"2ad2ad16d2ad2ad00042d42d00042ddb04deffa1705e2edc44cae1ed24a4da"
 ```
 
 ---
@@ -63,18 +104,54 @@ host.services.tls.jarm.fingerprint:"2ad2ad16d2ad2ad00042d42d00042ddb04deffa1705e
 ## SLIVER C2
 
 ```
-host.services.tls.certificates.leaf_data.issuer.common_name:"operators"
-host.services.tls.jarm.fingerprint:"3fd21b20d00000021c43d21b21b43d41226dd5dfc615dd4a96265559485910"
+host.services.cert.parsed.issuer.common_name:"operators"
+host.services.jarm.fingerprint:"3fd21b20d00000021c43d21b21b43d41226dd5dfc615dd4a96265559485910"
 ```
 
 ---
 
 ## MYTHIC C2
 
+### Başlık
 ```
 host.services.endpoints.http.html_title:"Mythic"
-host.services.tls.certificates.leaf_data.subject.organization:"Mythic"
-host.services.tls.jarm.fingerprint:"1dd40d40d00040d00042d43d000000831b6af40378e2dd35eeac4e9311926e"
+```
+
+### Port + Başlık (aynı servis)
+```
+host.services:(port=7443 and endpoints.http.html_title:"Mythic")
+```
+
+### Sertifika
+```
+host.services.cert.parsed.subject.organization:"Mythic"
+host.services.cert.parsed.issuer.organization:"Mythic"
+```
+
+### Favicon Fingerprint'i
+```
+host.services.endpoints.http.favicons.hash_sha256:"3cbf2084fe1733debe21f33511754191ed8f46268d1a8a122a29cccfc7c969f2"
+```
+
+> **Not:** Bu favicon gözlenen Mythic kurulumlarıyla güçlü biçimde ilişkili olsa da yalnızca Mythic'e özgü değildir. Daha güvenilir tespit için başka Mythic göstergeleriyle birleştirin.
+
+### Aynı Serviste Birleşik Sorgular
+```
+host.services:(endpoints.http.html_title:"Mythic" and cert.parsed.subject.organization:"Mythic")
+host.services:(endpoints.http.favicons.hash_sha256:"3cbf2084fe1733debe21f33511754191ed8f46268d1a8a122a29cccfc7c969f2" and endpoints.http.html_title:"Mythic")
+host.services:(port=7443 and endpoints.http.html_title:"Mythic" and cert.parsed.subject.organization:"Mythic")
+```
+
+### JARM Fingerprint'leri
+```
+host.services.jarm.fingerprint:"1dd40d40d00040d00042d43d000000831b6af40378e2dd35eeac4e9311926e"
+host.services.jarm.fingerprint:"27d40d40d00040d00042d43d000000d2e61cae37a985f75ecafb81b33ca523"
+```
+
+### Laravel/Inertia Tabanlı Paneller
+```
+host.services:(endpoints.http.html_title:"C2 Panel" and endpoints.http.headers:(key="Set-Cookie" and value:"c2backend_session"))
+host.services.endpoints.http.body:"<title inertia>C2 Panel</title>"
 ```
 
 ---
@@ -84,7 +161,7 @@ host.services.tls.jarm.fingerprint:"1dd40d40d00040d00042d43d000000831b6af40378e2
 ```
 host.services.endpoints.http.headers:"X_Havoc"
 host.services.endpoints.http.body:"Havoc"
-host.services.tls.certificates.leaf_data.subject.common_name:"Havoc"
+host.services.cert.parsed.subject.common_name:"Havoc"
 ```
 
 ---
@@ -92,8 +169,8 @@ host.services.tls.certificates.leaf_data.subject.common_name:"Havoc"
 ## ASYNCRAT
 
 ```
-host.services.tls.certificates.leaf_data.issuer_dn="CN=AsyncRAT Server"
-host.services.tls.certificates.leaf_data.subject.common_name:"AsyncRAT Server"
+host.services.cert.parsed.issuer_dn="CN=AsyncRAT Server"
+host.services.cert.parsed.subject.common_name:"AsyncRAT Server"
 ```
 
 ---
@@ -142,4 +219,4 @@ Tüm query'lerin detaylı listesi için: [CENSYS_QUERIES.md (English)](../CENSYS
 
 ---
 
-**Son Güncelleme:** 2026-02-01
+**Son Güncelleme:** 2026-09-30

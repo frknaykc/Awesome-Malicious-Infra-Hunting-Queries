@@ -108,8 +108,8 @@ Birden fazla fingerprint'i birleştirmek tespit doğruluğunu artırır:
 # Shodan - Title + Certificate
 http.title:"Mythic" ssl.cert.subject.o:"Mythic"
 
-# Censys - same_service ile birleşik
-same_service(services.tls.certificates.leaf_data.subject.dn="O=Mythic" AND services.http.response.html_title="Mythic")
+# Censys - Aynı serviste başlık ve sertifika
+host.services:(endpoints.http.html_title:"Mythic" and cert.parsed.subject.organization:"Mythic")
 
 # Netlas
 http.title:"Mythic" AND certificate.subject.organization:"Mythic"
@@ -139,7 +139,7 @@ http.favicon.hash:803527991 http.title:"Gophish" ssl.cert.issuer.O:"Gophish"
 ssl.cert.subject.cn:"AsyncRAT Server" ssl.cert.issuer.cn:"AsyncRAT Server"
 
 # Censys
-same_service(services.tls.certificates.leaf_data.issuer_dn="CN=AsyncRAT Server" and services.tls.certificates.leaf_data.subject_dn="CN=AsyncRAT Server")
+host.services:(cert.parsed.issuer_dn="CN=AsyncRAT Server" and cert.parsed.subject_dn="CN=AsyncRAT Server")
 ```
 
 **Sliver C2:**
@@ -149,6 +149,10 @@ ssl.cert.issuer.cn:"operators" ssl.jarm:"3fd21b20d00000021c43d21b21b43d41226dd5d
 ```
 
 ---
+
+## Sorgu Doğrulama Metodolojisi
+
+Tehdit raporu veya bilinen altyapıdan bir başlangıç sorgusu oluşturun. Adayları bağımsız örneklerle karşılaştırarak tekrar kullanılabilir HTTP, TLS ve servis göstergelerini çıkarın. Her göstergeyi internet genelinde yeniden arayıp çakışmaları ve yanlış pozitifleri inceleyin; mümkünse bağımsız sinyalleri birleştirdikten sonra sorguyu yayımlayın. Bilinen bir örnekte JARM, JA3S/JA4S, favicon, port, sertifika özelliği, header, sunucu sürümü, ASN, frontend dosyası veya body hash bulunması, onun o tehdide **özgü olduğunu kanıtlamaz**. Host sayılarını, örnek IP'leri ve doğrulanmamış adayları sorgu referansına taşımayın.
 
 ## Önemli Uyarılar
 
@@ -203,4 +207,4 @@ ssl.cert.issuer.cn:"operators" ssl.jarm:"3fd21b20d00000021c43d21b21b43d41226dd5d
 
 ---
 
-**Son Güncelleme:** 2026-02-01
+**Son Güncelleme:** 2026-09-30

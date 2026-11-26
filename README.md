@@ -108,8 +108,8 @@ Combining multiple fingerprints increases detection accuracy:
 # Shodan - Title + Certificate
 http.title:"Mythic" ssl.cert.subject.o:"Mythic"
 
-# Censys - Combined with same_service
-same_service(services.tls.certificates.leaf_data.subject.dn="O=Mythic" AND services.http.response.html_title="Mythic")
+# Censys - Same-service title and certificate
+host.services:(endpoints.http.html_title:"Mythic" and cert.parsed.subject.organization:"Mythic")
 
 # Netlas
 http.title:"Mythic" AND certificate.subject.organization:"Mythic"
@@ -139,7 +139,7 @@ http.favicon.hash:803527991 http.title:"Gophish" ssl.cert.issuer.O:"Gophish"
 ssl.cert.subject.cn:"AsyncRAT Server" ssl.cert.issuer.cn:"AsyncRAT Server"
 
 # Censys
-same_service(services.tls.certificates.leaf_data.issuer_dn="CN=AsyncRAT Server" and services.tls.certificates.leaf_data.subject_dn="CN=AsyncRAT Server")
+host.services:(cert.parsed.issuer_dn="CN=AsyncRAT Server" and cert.parsed.subject_dn="CN=AsyncRAT Server")
 ```
 
 **Sliver C2:**
@@ -149,6 +149,10 @@ ssl.cert.issuer.cn:"operators" ssl.jarm:"3fd21b20d00000021c43d21b21b43d41226dd5d
 ```
 
 ---
+
+## Query Validation Methodology
+
+Start with a reported threat or known infrastructure, use a seed query to find candidates, and compare independent instances before extracting reusable HTTP, TLS, or service fingerprints. Search each candidate fingerprint globally for collisions and false positives; combine independent signals where possible before publishing a query. Finding a JARM, JA3S/JA4S, favicon, port, certificate property, header, server version, ASN, frontend asset, or body hash on one known instance does **not** prove it is exclusive to that threat. Keep host counts, example IPs, and unvalidated candidates out of the query reference.
 
 ## Important Warnings
 
@@ -203,4 +207,4 @@ ssl.cert.issuer.cn:"operators" ssl.jarm:"3fd21b20d00000021c43d21b21b43d41226dd5d
 
 ---
 
-**Last Updated:** 2026-02-01
+**Last Updated:** 2026-09-30
